@@ -1,0 +1,109 @@
+services:
+  postgres:
+    image: postgres:17-alpine
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      POSTGRES_DB: mini-deploy-db
+    ports:
+      - "${POSTGRES_PORT}:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U $${POSTGRES_USER} -d postgres"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+    restart: unless-stopped
+
+  products:
+    build:
+      context: ./apps/products
+      dockerfile: Dockerfile
+      target: dev
+    env_file: ./apps/products/.env
+    volumes:
+      - ./apps/products:/app
+      - /app/node_modules
+    ports:
+      - "${PRODUCTS_PORT:-3001}:3001"
+    depends_on:
+      postgres:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "node", "-e", "fetch('http://127.0.0.1:3001/health').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 20s
+    restart: unless-stopped
+
+  orders:
+    build:
+      context: ./apps/orders
+      dockerfile: Dockerfile
+      target: dev
+    env_file: ./apps/orders/.env
+    volumes:
+      - ./apps/orders:/app
+      - /app/node_modules
+    ports:
+      - "${ORDERS_PORT:-3002}:3002"
+    depends_on:
+      postgres:
+        condition: service_healthy
+      products:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "node", "-e", "fetch('http://127.0.0.1:3002/health').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 20s
+    restart: unless-stopped
+
+  gateway:
+    build:
+      context: ./apps/gateway
+      dockerfile: Dockerfile
+      target: dev
+    env_file: ./apps/gateway/.env
+    volumes:
+      - ./apps/gateway:/app
+      - /app/node_modules
+    ports:
+      - "${GATEWAY_PORT:-3000}:3000"
+    depends_on:
+      products:
+        condition: service_healthy
+      orders:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "node", "-e", "fetch('http://127.0.0.1:3000/api/health').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 20s
+    restart: unless-stopped
+
+  web:
+    build:
+      context: ./apps/web
+      dockerfile: Dockerfile
+    command: ["npm", "run", "dev"]
+    env_file: ./apps/web/.env
+    ports:
+      - "${WEB_PORT:-5173}:5173"
+    depends_on:
+      gateway:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "node", "-e", "fetch('http://127.0.0.1:5173').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 20s
+    restart: unless-stopped
+
+volumes:
+  postgres_data:
