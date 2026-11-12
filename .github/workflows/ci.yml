@@ -28,7 +28,7 @@ jobs:
           cache-dependency-path: apps/${{ matrix.service }}/package-lock.json
 
       - name: Install, lint, test
-        working-directory: ${{ matrix.service }}
+        working-directory: apps/${{ matrix.service }}
         run: |
           npm ci
           npm run lint --if-present
@@ -52,7 +52,7 @@ jobs:
         id: meta
         uses: docker/metadata-action@v5
         with:
-          images: ${{ steps.ecr.outputs.registry }}/lab/${{ matrix.service }}
+          images: ${{ steps.ecr.outputs.registry }}/min-dep/${{ matrix.service }}
           tags: |
             type=sha,format=short,prefix=
             type=semver,pattern={{version}}
@@ -64,7 +64,7 @@ jobs:
         if: github.event_name == 'push'
         uses: docker/build-push-action@v6
         with:
-          context: ./${{ matrix.service }}
+          context: ./apps/${{ matrix.service }}
           target: prod
           push: true
           tags: ${{ steps.meta.outputs.tags }}
