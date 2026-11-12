@@ -17,7 +17,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        service: [gateway, product, order]
+        service: [gateway, products, orders]
     steps:
       - uses: actions/checkout@v4
 
