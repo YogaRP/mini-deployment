@@ -1,0 +1,72 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+    tags: ["v*"]
+  pull_request:
+    branches: [main]
+
+permissions:
+  id-token: write   # wajib untuk OIDC
+  contents: read
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        service: [gateway, product, order]
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: ${{ matrix.service }}/package-lock.json
+
+      - name: Install, lint, test
+        working-directory: ${{ matrix.service }}
+        run: |
+          npm ci
+          npm run lint --if-present
+          npm test --if-present
+
+      # Langkah berikut hanya jalan saat push (bukan PR)
+      - name: Configure AWS credentials
+        if: github.event_name == 'push'
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ vars.AWS_ROLE_ARN }}
+          aws-region: ${{ vars.AWS_REGION }}
+
+      - name: Login to ECR
+        if: github.event_name == 'push'
+        id: ecr
+        uses: aws-actions/amazon-ecr-login@v2
+
+      - name: Docker metadata (tags)
+        if: github.event_name == 'push'
+        id: meta
+        uses: docker/metadata-action@v5
+        with:
+          images: ${{ steps.ecr.outputs.registry }}/lab/${{ matrix.service }}
+          tags: |
+            type=sha,format=short,prefix=
+            type=semver,pattern={{version}}
+
+      - uses: docker/setup-buildx-action@v3
+        if: github.event_name == 'push'
+
+      - name: Build and push
+        if: github.event_name == 'push'
+        uses: docker/build-push-action@v6
+        with:
+          context: ./${{ matrix.service }}
+          target: prod
+          push: true
+          tags: ${{ steps.meta.outputs.tags }}
+          cache-from: type=gha,scope=${{ matrix.service }}
+          cache-to: type=gha,mode=max,scope=${{ matrix.service }}
