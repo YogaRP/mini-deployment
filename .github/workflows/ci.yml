@@ -5,8 +5,8 @@ on:
     branches: [main]
     tags:
       - "gateway-v*"
-      - "product-v*"
-      - "order-v*"
+      - "products-v*"
+      - "orders-v*"
   pull_request:
     branches: [main]
 
@@ -27,7 +27,7 @@ jobs:
             SERVICE="${TAG%%-v*}"
             echo "services=[\"$SERVICE\"]" >> "$GITHUB_OUTPUT"
           else
-            echo 'services=["gateway","product","order"]' >> "$GITHUB_OUTPUT"
+            echo 'services=["gateway","products","orders"]' >> "$GITHUB_OUTPUT"
           fi
 
   build:
