@@ -25,15 +25,13 @@ jobs:
           if [[ "$GITHUB_REF" == refs/tags/* ]]; then
             TAG="${GITHUB_REF#refs/tags/}"
             SERVICE="${TAG%%-v*}"
-            SERVICES=$(jq -cn --arg s "$SERVICE" '[$s]')
+            echo "services=[\"$SERVICE\"]" >> "$GITHUB_OUTPUT"
           else
-            SERVICES='["gateway","product","order"]'
+            echo 'services=["gateway","product","order"]' >> "$GITHUB_OUTPUT"
           fi
-          echo "ref=$GITHUB_REF"
-          echo "services=$SERVICES"
-          echo "services=$SERVICES" >> "$GITHUB_OUTPUT"
 
   build:
+    needs: detect
     runs-on: ubuntu-latest
     strategy:
       fail-fast: false
