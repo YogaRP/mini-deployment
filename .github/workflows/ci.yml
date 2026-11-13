@@ -33,6 +33,9 @@ jobs:
           npm ci
           npm run lint --if-present
           npm test --if-present
+      
+      - name: Debug repo info
+        run: echo "repo=$GITHUB_REPOSITORY ref=$GITHUB_REF event=$GITHUB_EVENT_NAME"
 
       # Langkah berikut hanya jalan saat push (bukan PR)
       - name: Configure AWS credentials
