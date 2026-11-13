@@ -37,6 +37,11 @@ jobs:
       - name: Debug repo info
         run: echo "repo=$GITHUB_REPOSITORY ref=$GITHUB_REF event=$GITHUB_EVENT_NAME"
 
+      - name: Debug role ARN
+        run: |
+          echo "role=[${{ vars.AWS_ROLE_ARN }}]"
+          echo "region=[${{ vars.AWS_REGION }}]"
+
       # Langkah berikut hanya jalan saat push (bukan PR)
       - name: Configure AWS credentials
         if: github.event_name == 'push'
