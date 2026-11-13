@@ -3,7 +3,10 @@ name: CI
 on:
   push:
     branches: [main]
-    tags: ["v*"]
+    tags:
+      - "gateway-v*"
+      - "product-v*"
+      - "order-v*"
   pull_request:
     branches: [main]
 
@@ -12,12 +15,27 @@ permissions:
   contents: read
 
 jobs:
+  detect:
+    runs-on: ubuntu-latest
+    outputs:
+      services: ${{ steps.set.outputs.services }}
+    steps:
+      - id: set
+        run: |
+          if [[ "$GITHUB_REF" == refs/tags/* ]]; then
+            TAG="${GITHUB_REF#refs/tags/}"
+            SERVICE="${TAG%%-v*}"
+            echo "services=[\"$SERVICE\"]" >> "$GITHUB_OUTPUT"
+          else
+            echo 'services=["gateway","product","order"]' >> "$GITHUB_OUTPUT"
+          fi
+
   build:
     runs-on: ubuntu-latest
     strategy:
       fail-fast: false
       matrix:
-        service: [gateway, products, orders]
+        service: ${{ fromJson(needs.detect.outputs.services) }}
     steps:
       - uses: actions/checkout@v4
 
@@ -33,14 +51,6 @@ jobs:
           npm ci
           npm run lint --if-present
           npm test --if-present
-      
-      - name: Debug repo info
-        run: echo "repo=$GITHUB_REPOSITORY ref=$GITHUB_REF event=$GITHUB_EVENT_NAME"
-
-      - name: Debug role ARN
-        run: |
-          echo "role=[${{ vars.AWS_ROLE_ARN }}]"
-          echo "region=[${{ vars.AWS_REGION }}]"
 
       # Langkah berikut hanya jalan saat push (bukan PR)
       - name: Configure AWS credentials
@@ -62,8 +72,8 @@ jobs:
         with:
           images: ${{ steps.ecr.outputs.registry }}/min-dep/${{ matrix.service }}
           tags: |
-            type=sha,format=short,prefix=
-            type=semver,pattern={{version}}
+            type=sha,format=short,prefix=,enable=${{ github.ref_type != 'tag' }}
+            type=match,pattern=${{ matrix.service }}-v(.*),group=1
 
       - uses: docker/setup-buildx-action@v3
         if: github.event_name == 'push'
