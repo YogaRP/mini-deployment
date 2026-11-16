@@ -28,7 +28,7 @@ jobs:
             SERVICE="${TAG%%-v*}"
             echo "services=[\"$SERVICE\"]" >> "$GITHUB_OUTPUT"
           else
-            echo 'services=["gateway","product","order","web"]' >> "$GITHUB_OUTPUT"
+            echo 'services=["gateway","products","orders","web"]' >> "$GITHUB_OUTPUT"
           fi
 
   build:
