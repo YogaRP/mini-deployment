@@ -7,6 +7,7 @@ on:
       - "gateway-v*"
       - "products-v*"
       - "orders-v*"
+      - "web-v*"
   pull_request:
     branches: [main]
 
@@ -27,7 +28,7 @@ jobs:
             SERVICE="${TAG%%-v*}"
             echo "services=[\"$SERVICE\"]" >> "$GITHUB_OUTPUT"
           else
-            echo 'services=["gateway","products","orders"]' >> "$GITHUB_OUTPUT"
+            echo 'services=["gateway","product","order","web"]' >> "$GITHUB_OUTPUT"
           fi
 
   build:
@@ -84,7 +85,6 @@ jobs:
         uses: docker/build-push-action@v6
         with:
           context: ./apps/${{ matrix.service }}
-          target: prod
           push: true
           tags: ${{ steps.meta.outputs.tags }}
           cache-from: type=gha,scope=${{ matrix.service }}
