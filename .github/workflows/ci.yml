@@ -32,7 +32,7 @@ jobs:
             echo "version=${TAG#*-v}" >> "$GITHUB_OUTPUT"
             SERVICES=$(jq -cn --arg s "$SERVICE" '[$s]')
           else
-            SERVICES='["gateway","product","order","web"]'
+            SERVICES='["gateway","products","orders","web"]'
           fi
           echo "services=$SERVICES" >> "$GITHUB_OUTPUT"
 
