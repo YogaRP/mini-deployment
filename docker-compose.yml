@@ -18,14 +18,14 @@ services:
     restart: unless-stopped
 
   products:
-    image: ${REGISTRY}/min-dep/products:${PRODUCT_TAG}
+    image: ${REGISTRY}/min-dep/products:${PRODUCTS_TAG}
     env_file: "./apps/products/.env"
     depends_on:
       postgres: { condition: service_healthy }
     restart: unless-stopped
 
   orders:
-    image: ${REGISTRY}/min-dep/orders:${ORDER_TAG}
+    image: ${REGISTRY}/min-dep/orders:${ORDERS_TAG}
     env_file: "./apps/orders/.env"
     depends_on:
       postgres: { condition: service_healthy }
