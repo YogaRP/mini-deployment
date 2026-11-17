@@ -20,16 +20,21 @@ jobs:
     runs-on: ubuntu-latest
     outputs:
       services: ${{ steps.set.outputs.services }}
+      service: ${{ steps.set.outputs.service }}
+      version: ${{ steps.set.outputs.version }}
     steps:
       - id: set
         run: |
           if [[ "$GITHUB_REF" == refs/tags/* ]]; then
             TAG="${GITHUB_REF#refs/tags/}"
             SERVICE="${TAG%%-v*}"
-            echo "services=[\"$SERVICE\"]" >> "$GITHUB_OUTPUT"
+            echo "service=$SERVICE" >> "$GITHUB_OUTPUT"
+            echo "version=${TAG#*-v}" >> "$GITHUB_OUTPUT"
+            SERVICES=$(jq -cn --arg s "$SERVICE" '[$s]')
           else
-            echo 'services=["gateway","products","orders","web"]' >> "$GITHUB_OUTPUT"
+            SERVICES='["gateway","product","order","web"]'
           fi
+          echo "services=$SERVICES" >> "$GITHUB_OUTPUT"
 
   build:
     needs: detect
@@ -89,3 +94,14 @@ jobs:
           tags: ${{ steps.meta.outputs.tags }}
           cache-from: type=gha,scope=${{ matrix.service }}
           cache-to: type=gha,mode=max,scope=${{ matrix.service }}
+
+  deploy:
+    needs: [detect, build]
+    if: startsWith(github.ref, 'refs/tags/')
+    uses: ./.github/workflows/deploy.yml
+    permissions:
+      id-token: write
+      contents: read
+    with:
+      service: ${{ needs.detect.outputs.service }}
+      tag: ${{ needs.detect.outputs.version }}
