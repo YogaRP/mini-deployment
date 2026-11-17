@@ -78,6 +78,8 @@ jobs:
         uses: docker/metadata-action@v5
         with:
           images: ${{ steps.ecr.outputs.registry }}/min-dep/${{ matrix.service }}
+          flavor: |
+            latest=false
           tags: |
             type=sha,format=short,prefix=,enable=${{ github.ref_type != 'tag' }}
             type=match,pattern=${{ matrix.service }}-v(.*),group=1
