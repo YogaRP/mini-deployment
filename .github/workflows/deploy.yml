@@ -32,10 +32,13 @@ jobs:
       TAG: ${{ inputs.tag }}
       INSTANCE_ID: ${{ vars.EC2_INSTANCE_ID }}
     steps:
+      - uses: actions/checkout@v4
+
       - name: Validate input
         run: |
           [[ "$SERVICE" =~ ^(gateway|products|orders|web)$ ]] || { echo "service tidak valid"; exit 1; }
           [[ "$TAG" =~ ^[A-Za-z0-9._-]+$ ]] || { echo "tag tidak valid"; exit 1; }
+          [[ "$INSTANCE_ID" =~ ^i-[a-z0-9]{8,17}$ ]] || { echo "EC2_INSTANCE_ID kosong/salah"; exit 1; }
 
       - uses: aws-actions/configure-aws-credentials@v4
         with:
@@ -44,34 +47,25 @@ jobs:
 
       - name: Deploy via SSM
         run: |
-          VAR="$(echo "$SERVICE" | tr a-z A-Z)_TAG"
+          SCRIPT_B64=$(base64 -w0 deploy/deploy.sh)
+          COMPOSE_B64=$(base64 -w0 docker-compose.yml)
 
-          SCRIPT=$(cat <<EOF
-          set -euo pipefail
-          cd /home/ubuntu/app
-          REGISTRY=\$(grep '^REGISTRY=' .env | cut -d= -f2)
-          cp .env .env.bak
-          rollback() {
-            echo "DEPLOY GAGAL, rollback"
-            cp .env.bak .env
-            docker compose up -d ${SERVICE}
-          }
-          trap rollback ERR
-          aws ecr get-login-password --region ${AWS_REGION} | docker login --username AWS --password-stdin "\$REGISTRY"
-          sed -i "s/^${VAR}=.*/${VAR}=${TAG}/" .env
-          chown ubuntu:ubuntu .env && chmod 600 .env
-          docker compose pull ${SERVICE}
-          docker compose up -d --wait --wait-timeout 90 ${SERVICE}
-          docker compose ps ${SERVICE}
-          echo "OK: ${SERVICE} -> ${TAG}"
-          EOF
-          )
+          PARAMS=$(jq -cn \
+            --arg s "$SCRIPT_B64" --arg c "$COMPOSE_B64" \
+            --arg svc "$SERVICE" --arg tag "$TAG" --arg region "$AWS_REGION" \
+            '{commands: [
+              "set -e",
+              "mkdir -p /opt/deploy",
+              "echo \($s) | base64 -d > /opt/deploy/deploy.sh",
+              "echo \($c) | base64 -d > /home/ubuntu/app/docker-compose.yml.new",
+              "AWS_REGION=\($region) bash /opt/deploy/deploy.sh \($svc) \($tag)"
+            ]}')
 
           CMD_ID=$(aws ssm send-command \
             --instance-ids "$INSTANCE_ID" \
             --document-name AWS-RunShellScript \
             --comment "deploy $SERVICE $TAG" \
-            --parameters "$(jq -cn --arg s "$SCRIPT" '{commands: [$s]}')" \
+            --parameters "$PARAMS" \
             --query Command.CommandId --output text)
 
           for i in $(seq 1 60); do
