@@ -1,10 +1,11 @@
-import { Column, Entity, PrimaryGeneratedColumn } from 'typeorm';
+import { Column, Entity, Index, PrimaryGeneratedColumn } from 'typeorm';
 
 @Entity('products')
 export class Product {
   @PrimaryGeneratedColumn('uuid')
   id!: string;
 
+  @Index('IDX_products_name')
   @Column({ length: 120 })
   name!: string;
 

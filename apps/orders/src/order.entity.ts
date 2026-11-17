@@ -1,4 +1,4 @@
-import { Column, Entity, PrimaryGeneratedColumn } from 'typeorm';
+import { Column, Entity, Index, PrimaryGeneratedColumn } from 'typeorm';
 
 @Entity('orders')
 export class Order {
@@ -20,6 +20,7 @@ export class Order {
   @Column({ type: 'numeric', precision: 12, scale: 2 })
   total!: string;
 
+  @Index('IDX_orders_created_at')
   @Column({ type: 'timestamptz', default: () => 'CURRENT_TIMESTAMP' })
   createdAt!: Date;
 }

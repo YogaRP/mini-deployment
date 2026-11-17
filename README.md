@@ -37,6 +37,26 @@ TypeORM membuat tabel otomatis di environment non-production agar alur belajar
 lebih ringkas. Untuk deployment production, tambahkan migration sebelum
 mengaktifkan `NODE_ENV=production`.
 
+## Database indexes
+
+Index sengaja mengikuti query yang benar-benar digunakan:
+
+- `products.name` (`IDX_products_name`) membantu `GET /products`, yang
+  mengurutkan katalog berdasarkan nama.
+- `orders.createdAt` (`IDX_orders_created_at`) membantu `GET /orders`, yang
+  mengurutkan pesanan terbaru terlebih dahulu.
+- `id` pada kedua tabel adalah primary key; PostgreSQL otomatis membuat index
+  untuk primary key, jadi tidak perlu menambahkan index kedua untuknya.
+
+Tidak semua kolom perlu di-index. Index menambah penggunaan storage dan biaya
+saat `INSERT`, `UPDATE`, atau `DELETE`. Tambahkan index setelah melihat pola
+`WHERE`, `JOIN`, dan `ORDER BY` yang sering dipakai, lalu verifikasi dengan
+`EXPLAIN (ANALYZE, BUFFERS)` pada data yang representatif. `productId` pada
+orders belum di-index karena belum dipakai untuk pencarian atau join di service
+ini. Di mode development TypeORM `synchronize` menerapkan metadata index;
+untuk production, buat migration yang menambahkan index sebelum
+menonaktifkan `synchronize`.
+
 ## Menjalankan dengan Docker Compose
 
 Compose menjalankan satu server PostgreSQL dan seluruh aplikasi di container.
