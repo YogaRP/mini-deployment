@@ -67,6 +67,12 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
+      
+      - name: Debug lockfile
+        run: |
+          echo "service=${{ matrix.service }}"
+          ls -la apps/${{ matrix.service }} || true
+
       - uses: actions/setup-node@v4
         with:
           node-version: 22
