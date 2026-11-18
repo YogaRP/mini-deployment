@@ -16,8 +16,8 @@ services:
       retries: 5
       start_period: 20s
     depends_on:
-      product: { condition: service_healthy }
-      order:   { condition: service_healthy }
+      products: { condition: service_healthy }
+      orders:   { condition: service_healthy }
     restart: unless-stopped
 
   products:
