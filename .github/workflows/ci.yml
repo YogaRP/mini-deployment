@@ -23,7 +23,14 @@ jobs:
       service: ${{ steps.set.outputs.service }}
       version: ${{ steps.set.outputs.version }}
     steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
       - id: set
+        env:
+          EVENT: ${{ github.event_name }}
+          BASE_SHA: ${{ github.event.pull_request.base.sha || github.event.before }}
         run: |
           if [[ "$GITHUB_REF" == refs/tags/* ]]; then
             TAG="${GITHUB_REF#refs/tags/}"
@@ -32,12 +39,26 @@ jobs:
             echo "version=${TAG#*-v}" >> "$GITHUB_OUTPUT"
             SERVICES=$(jq -cn --arg s "$SERVICE" '[$s]')
           else
-            SERVICES='["gateway","products","orders","web"]'
+            ALL="gateway products orders web"
+            if [[ -z "$BASE_SHA" || "$BASE_SHA" =~ ^0+$ ]]; then
+              CHANGED="$ALL"
+            else
+              FILES=$(git diff --name-only "$BASE_SHA" "$GITHUB_SHA")
+              CHANGED=""
+              for s in $ALL; do
+                if echo "$FILES" | grep -q "^apps/$s/"; then CHANGED="$CHANGED $s"; fi
+              done
+              # perubahan workflow ikut membangun semua
+              if echo "$FILES" | grep -q "^.github/workflows/"; then CHANGED="$ALL"; fi
+            fi
+            SERVICES=$(printf '%s\n' $CHANGED | jq -R . | jq -cs .)
           fi
+          echo "services=$SERVICES"
           echo "services=$SERVICES" >> "$GITHUB_OUTPUT"
 
   build:
     needs: detect
+    if: needs.detect.outputs.services != '[]'
     runs-on: ubuntu-latest
     strategy:
       fail-fast: false
@@ -107,3 +128,11 @@ jobs:
     with:
       service: ${{ needs.detect.outputs.service }}
       tag: ${{ needs.detect.outputs.version }}
+
+  ci-ok:
+    needs: build
+    if: always()
+    runs-on: ubuntu-latest
+    steps:
+      - run: |
+          [[ "${{ needs.build.result }}" =~ ^(success|skipped)$ ]] || exit 1
