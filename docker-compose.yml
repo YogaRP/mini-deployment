@@ -15,11 +15,19 @@ services:
       interval: 10s
       retries: 5
       start_period: 20s
-    depends_on: [products, orders]
+    depends_on:
+      product: { condition: service_healthy }
+      order:   { condition: service_healthy }
     restart: unless-stopped
 
   products:
     image: ${REGISTRY}/min-dep/products:${PRODUCTS_TAG}
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://127.0.0.1:3001/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 20s
     env_file: "./apps/products/.env"
     depends_on:
       postgres: { condition: service_healthy }
@@ -27,6 +35,12 @@ services:
 
   orders:
     image: ${REGISTRY}/min-dep/orders:${ORDERS_TAG}
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://127.0.0.1:3002/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 20s
     env_file: "./apps/orders/.env"
     depends_on:
       postgres: { condition: service_healthy }
