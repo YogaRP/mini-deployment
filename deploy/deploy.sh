@@ -43,6 +43,13 @@ sed -i "s/^${VAR}=.*/${VAR}=${TAG}/" .env
 chown ubuntu:ubuntu .env docker-compose.yml
 chmod 600 .env
 
+# tarik konfigurasi dari SSM ke environment proses (tidak ditulis ke disk)
+for NAME in DB_USER DB_NAME DB_PASSWORD; do
+  VALUE="$(aws ssm get-parameter --name "/mini/prod/${NAME}" \
+    --with-decryption --query Parameter.Value --output text --region "$REGION")"
+  export "$NAME=$VALUE"
+done
+
 docker compose pull "$SERVICE"
 docker compose up -d --wait --wait-timeout 90 "$SERVICE"
 docker compose ps "$SERVICE"
