@@ -44,7 +44,7 @@ chown ubuntu:ubuntu .env docker-compose.yml
 chmod 600 .env
 
 # tarik konfigurasi dari SSM ke environment proses (tidak ditulis ke disk)
-for NAME in DB_USER DB_NAME DB_PASSWORD; do
+for NAME in POSTGRES_USER POSTGRES_PASSWORD; do
   VALUE="$(aws ssm get-parameter --name "/mini/prod/${NAME}" \
     --with-decryption --query Parameter.Value --output text --region "$REGION")"
   export "$NAME=$VALUE"
