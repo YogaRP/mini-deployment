@@ -130,7 +130,7 @@ jobs:
       tag: ${{ needs.detect.outputs.version }}
 
   ci-ok:
-    needs: build
+    needs: [detect, build]
     if: always()
     runs-on: ubuntu-latest
     steps:
