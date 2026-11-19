@@ -40,7 +40,7 @@ jobs:
           [[ "$TAG" =~ ^[A-Za-z0-9._-]+$ ]] || { echo "tag tidak valid"; exit 1; }
           [[ "$INSTANCE_ID" =~ ^i-[a-z0-9]{8,17}$ ]] || { echo "EC2_INSTANCE_ID kosong/salah"; exit 1; }
 
-      - uses: aws-actions/configure-aws-credentials@v4
+      - uses: aws-actions/configure-aws-credentials@v6
         with:
           role-to-assume: ${{ vars.AWS_ROLE_ARN }}
           aws-region: ${{ vars.AWS_REGION }}
