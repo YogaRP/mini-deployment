@@ -51,7 +51,7 @@ jobs:
               # perubahan workflow ikut membangun semua
               if echo "$FILES" | grep -q "^.github/workflows/"; then CHANGED="$ALL"; fi
             fi
-            SERVICES=$(printf '%s\n' $CHANGED | jq -R . | jq -cs .)
+            SERVICES=$(echo $CHANGED | tr ' ' '\n' | jq -R . | jq -cs 'map(select(length > 0))')
           fi
           echo "services=$SERVICES"
           echo "services=$SERVICES" >> "$GITHUB_OUTPUT"
