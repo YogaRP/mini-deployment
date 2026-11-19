@@ -138,3 +138,5 @@ ke database disposable:
 Integration test gateway memakai mock downstream. Test Product dan Order
 menjalankan HTTP app dengan database PostgreSQL; test Order memakai HTTP stub
 untuk Product Service.
+
+Tes update
