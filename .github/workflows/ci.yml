@@ -114,7 +114,27 @@ jobs:
       - uses: docker/setup-buildx-action@v3
         if: github.event_name == 'push'
 
-      - name: Build and push
+      - name: Build image (local)
+        if: github.event_name == 'push'
+        uses: docker/build-push-action@v6
+        with:
+          context: ./apps/${{ matrix.service }}
+          load: true
+          push: false
+          tags: scan-target:${{ github.sha }}
+          cache-from: type=gha,scope=${{ matrix.service }}
+          cache-to: type=gha,mode=max,scope=${{ matrix.service }}
+      
+      - name: Trivy scan
+        if: github.event_name == 'push'
+        uses: aquasecurity/trivy-action@v0.36.0
+        with:
+          image-ref: scan-target:${{ github.sha }}
+          severity: HIGH,CRITICAL
+          ignore-unfixed: true
+          exit-code: 1
+
+      - name: Push to ECR
         if: github.event_name == 'push'
         uses: docker/build-push-action@v6
         with:
@@ -122,7 +142,6 @@ jobs:
           push: true
           tags: ${{ steps.meta.outputs.tags }}
           cache-from: type=gha,scope=${{ matrix.service }}
-          cache-to: type=gha,mode=max,scope=${{ matrix.service }}
 
   deploy:
     needs: [detect, build]
