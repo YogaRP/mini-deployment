@@ -48,18 +48,21 @@ jobs:
       - name: Deploy via SSM
         run: |
           SCRIPT_B64=$(base64 -w0 deploy/deploy.sh)
+          BACKUP_B64=$(base64 -w0 deploy/backup.sh)
           COMPOSE_B64=$(base64 -w0 docker-compose.yml)
 
           PARAMS=$(jq -cn \
-            --arg s "$SCRIPT_B64" --arg c "$COMPOSE_B64" \
-            --arg svc "$SERVICE" --arg tag "$TAG" --arg region "$AWS_REGION" \
-            '{commands: [
-              "set -e",
-              "mkdir -p /opt/deploy",
-              "echo \($s) | base64 -d > /opt/deploy/deploy.sh",
-              "echo \($c) | base64 -d > /home/ubuntu/app/docker-compose.yml.new",
-              "AWS_REGION=\($region) bash /opt/deploy/deploy.sh \($svc) \($tag)"
-            ]}')
+          --arg s "$SCRIPT_B64" --arg b "$BACKUP_B64" --arg c "$COMPOSE_B64" \
+          --arg svc "$SERVICE" --arg tag "$TAG" --arg region "$AWS_REGION" \
+          '{commands: [
+            "set -e",
+            "mkdir -p /opt/deploy",
+            "echo \($s) | base64 -d > /opt/deploy/deploy.sh",
+            "echo \($b) | base64 -d > /opt/deploy/backup.sh",
+            "chmod 755 /opt/deploy/backup.sh",
+            "echo \($c) | base64 -d > /home/ubuntu/app/docker-compose.yml.new",
+            "AWS_REGION=\($region) bash /opt/deploy/deploy.sh \($svc) \($tag)"
+          ]}')
 
           CMD_ID=$(aws ssm send-command \
             --instance-ids "$INSTANCE_ID" \
