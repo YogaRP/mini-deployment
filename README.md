@@ -33,9 +33,37 @@ langsung dengan Product Service untuk memvalidasi produk.
 6. Jalankan UI dengan `npm --prefix apps/web run dev`, lalu buka
    `http://localhost:5173`.
 
-TypeORM membuat tabel otomatis di environment non-production agar alur belajar
-lebih ringkas. Untuk deployment production, tambahkan migration sebelum
-mengaktifkan `NODE_ENV=production`.
+Di development dan test, TypeORM menyinkronkan schema dari entity agar alur
+belajar lebih ringkas. Di production, `synchronize` nonaktif dan schema dikelola
+menggunakan migration.
+
+## Database migrations
+
+Product Service dan Order Service memiliki migration sendiri, sehingga tiap
+service mengubah database miliknya saja. Migration awal membuat tabel dan
+index yang didefinisikan di entity. Jalankan command dari root repository:
+
+```sh
+npm --prefix apps/products run migration:show
+npm --prefix apps/products run migration:run
+npm --prefix apps/orders run migration:show
+npm --prefix apps/orders run migration:run
+```
+
+Pastikan `DATABASE_URL` di masing-masing service mengarah ke database yang
+sudah dibuat. Jalankan `migration:run` sebelum memulai service dengan
+`NODE_ENV=production`. Untuk membatalkan hanya migration terakhir:
+
+```sh
+npm --prefix apps/products run migration:revert
+npm --prefix apps/orders run migration:revert
+```
+
+Migration awal ditujukan untuk database kosong. Jika tabel sudah dibuat oleh
+`synchronize` di development, jangan jalankan migration awal pada schema
+tersebut apa adanya karena tabel akan sudah ada. Gunakan database production
+baru untuk migration awal, atau siapkan proses baseline/adopsi schema yang
+sesuai sebelum membawa data yang sudah ada.
 
 ## Database indexes
 
@@ -54,8 +82,7 @@ saat `INSERT`, `UPDATE`, atau `DELETE`. Tambahkan index setelah melihat pola
 `EXPLAIN (ANALYZE, BUFFERS)` pada data yang representatif. `productId` pada
 orders belum di-index karena belum dipakai untuk pencarian atau join di service
 ini. Di mode development TypeORM `synchronize` menerapkan metadata index;
-untuk production, buat migration yang menambahkan index sebelum
-menonaktifkan `synchronize`.
+untuk production, migration awal service membuat index tersebut.
 
 ## Menjalankan dengan Docker Compose
 
@@ -85,6 +112,13 @@ untuk integration test. Contoh menjalankan test dari container:
 ```sh
 docker compose run --rm -e NODE_ENV=test products npm run test:e2e
 docker compose run --rm -e NODE_ENV=test orders npm run test:e2e
+```
+
+Untuk menjalankan migration menggunakan environment database dari Compose:
+
+```sh
+docker compose run --rm products npm run migration:run
+docker compose run --rm orders npm run migration:run
 ```
 
 Compose memetakan port PostgreSQL, kedua service domain, Gateway, dan UI ke
