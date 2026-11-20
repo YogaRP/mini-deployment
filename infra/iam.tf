@@ -2,7 +2,7 @@ data "aws_caller_identity" "current" {}
 
 locals {
   account_id    = data.aws_caller_identity.current.account_id
-  backup_bucket = "mini-deployment-backup-${local.account_id}"
+  backup_bucket = "mini-deployment-backup-yogarp"
 }
 
 data "aws_iam_policy_document" "ec2_assume" {
@@ -59,6 +59,12 @@ data "aws_iam_policy_document" "ec2_app" {
   statement {
     sid       = "BackupWrite"
     actions   = ["s3:PutObject"]
+    resources = ["arn:aws:s3:::${local.backup_bucket}/*"]
+  }
+
+  statement {
+    sid       = "BackupRead"
+    actions   = ["s3:GetObject"]
     resources = ["arn:aws:s3:::${local.backup_bucket}/*"]
   }
 }
