@@ -1,0 +1,78 @@
+- name: Siapkan server aplikasi
+  hosts: lab
+  become: true            # jalankan sebagai root (sudo)
+
+  tasks:
+    - name: Paket dasar
+      ansible.builtin.apt:
+        name: [ca-certificates, curl, git, unzip, gnupg]
+        state: present
+        update_cache: true
+
+    - name: Kunci repo Docker
+      ansible.builtin.get_url:
+        url: https://download.docker.com/linux/ubuntu/gpg
+        dest: /etc/apt/keyrings/docker.asc
+        mode: "0644"
+
+    - name: Repo Docker
+      ansible.builtin.apt_repository:
+        repo: "deb [arch=amd64 signed-by=/etc/apt/keyrings/docker.asc] https://download.docker.com/linux/ubuntu {{ ansible_distribution_release }} stable"
+        state: present
+
+    - name: Pasang Docker
+      ansible.builtin.apt:
+        name: [docker-ce, docker-ce-cli, containerd.io, docker-buildx-plugin, docker-compose-plugin]
+        state: present
+        update_cache: true
+
+    - name: User ubuntu masuk grup docker
+      ansible.builtin.user:
+        name: ubuntu
+        groups: docker
+        append: true
+
+    - name: Folder aplikasi
+      ansible.builtin.file:
+        path: "{{ item }}"
+        state: directory
+        owner: ubuntu
+        group: ubuntu
+        mode: "0755"
+      loop:
+        - /home/ubuntu/app
+        - /home/ubuntu/app/certs
+        - /opt/deploy
+    
+    - name: Skrip backup
+      ansible.builtin.copy:
+        src: ../deploy/backup.sh
+        dest: /opt/deploy/backup.sh
+        owner: root
+        group: root
+        mode: "0755"
+
+    - name: Cron backup harian (02:00 WIB = 19:00 UTC)
+      ansible.builtin.cron:
+        name: backup postgres
+        user: ubuntu
+        minute: "0"
+        hour: "19"
+        job: "/opt/deploy/backup.sh >> /home/ubuntu/backup.log 2>&1"
+
+    - name: Sertifikat origin
+      ansible.builtin.copy:
+        content: "{{ lookup('amazon.aws.ssm_parameter', '/mini/prod/TLS_CERT', region='ap-southeast-1', decrypt=true) }}"
+        dest: /home/ubuntu/app/certs/cert.pem
+        owner: ubuntu
+        group: ubuntu
+        mode: "0644"
+
+    - name: Key origin (dibaca grup 101 = user nginx di container)
+      ansible.builtin.copy:
+        content: "{{ lookup('amazon.aws.ssm_parameter', '/mini/prod/TLS_KEY', region='ap-southeast-1', decrypt=true) }}"
+        dest: /home/ubuntu/app/certs/key.pem
+        owner: ubuntu
+        group: "101"
+        mode: "0640"
+      no_log: true
