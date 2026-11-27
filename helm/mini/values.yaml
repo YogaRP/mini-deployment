@@ -1,0 +1,41 @@
+registry: 418884735647.dkr.ecr.ap-southeast-1.amazonaws.com/min-dep
+
+services:
+  gateway:
+    tag: "f0bd407"
+    port: 3000
+    replicas: 2
+    healthPath: /api/health
+    secret: false
+    config:
+      NODE_ENV: development
+      PORT: "3000"
+      WEB_ORIGIN: http://localhost:5173
+      PRODUCTS_SERVICE_URL: http://products:3001
+      ORDERS_SERVICE_URL: http://orders:3002
+  products:
+    tag: "f0bd407"
+    port: 3001
+    replicas: 2
+    healthPath: /health
+    secret: true
+    config:
+      NODE_ENV: development
+      PORT: "3001"
+  orders:
+    tag: "f0bd407"
+    port: 3002
+    replicas: 2
+    healthPath: /health
+    secret: true
+    config:
+      NODE_ENV: development
+      PORT: "3002"
+      PRODUCTS_SERVICE_URL: http://products:3001
+
+web:
+  tag: "e138003"
+  replicas: 2
+
+ingress:
+  className: nginx
